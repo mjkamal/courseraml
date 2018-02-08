@@ -1,0 +1,72 @@
+---
+title: "Practical ML project"
+author: "MJ Kamal"
+date: "February 11, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+
+```{r sec1}
+library(caret)
+
+
+# Read the data
+training <- read.csv("project_training.csv")
+testing <- read.csv("project_test.csv")
+```
+# Feature engineering
+```{r sec2}
+# Build filtered list of features - excluding obvious ones & ones with large number of missing values (from eye balling)
+features <- c("roll_belt", "pitch_belt", "yaw_belt", "total_accel_belt", "gyros_belt_x", "gyros_belt_y", "gyros_belt_z","accel_belt_x","accel_belt_y","accel_belt_z","magnet_belt_x","magnet_belt_y","magnet_belt_z","roll_arm", "pitch_arm","yaw_arm","total_accel_arm","gyros_arm_x","gyros_arm_y","gyros_arm_z","accel_arm_x",
+"accel_arm_y","accel_arm_z","magnet_arm_x","magnet_arm_y","magnet_arm_z","roll_dumbbell","pitch_dumbbell","yaw_dumbbell","gyros_dumbbell_x","gyros_dumbbell_y","gyros_dumbbell_z","accel_dumbbell_x","accel_dumbbell_y",
+ "accel_dumbbell_z","magnet_dumbbell_x","magnet_dumbbell_y","magnet_dumbbell_z","roll_forearm","pitch_forearm","yaw_forearm","total_accel_forearm","gyros_forearm_x","gyros_forearm_y","gyros_forearm_z","accel_forearm_x","accel_forearm_y","accel_forearm_z", "magnet_forearm_x","magnet_forearm_y","magnet_forearm_z","classe")
+
+# Extract out the filtered features from training data
+training = subset(training,select = features)
+
+# Remove leftover observations with missing values in any of the features
+training = training[complete.cases(training), ]
+
+# In addition remove low variance features
+nzv_cols <- nearZeroVar(training) 
+if(length(nzv_cols) > 0) training <- training[, -nzv_cols]
+
+# Explicitly Convert the target column to factors to be safe
+training$classe <- as.factor(training$classe) 
+
+```
+
+# Build and train the model
+
+```{r sec3}
+# Setting up cross-validation with 10-fold 
+# Each cross-validation is repeated 3 times (randomly partioned each time)
+# The model tuning parameters grid is to be set randomly
+fitControl <- trainControl( method = "repeatedcv",  number = 10, repeats = 3, search = "random")
+
+# Train with Random Forest of 50 trees max using the above cross-validation spec
+rndfit <-train(classe ~ ., data = training,method='rf',ntree=50, trControl=fitControl)
+```
+# Get stats on the fitted model
+```{r sec4}
+print(rndfit)
+
+# Predict on the training data
+pred <- predict(rndfit, newdata = training)
+
+# Get the confusion matrix for above prediction
+confusionMatrix(pred,training$classe)$table
+
+```
+
+# Predict on the test data
+```{r sec5}
+pred <- predict(rndfit, newdata = testing)
+
+```
