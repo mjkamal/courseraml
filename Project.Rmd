@@ -16,9 +16,9 @@ knitr::opts_chunk$set(echo = TRUE)
 library(caret)
 
 
-# Read the data
+# Read the training data - will read the testing later below
 training <- read.csv("project_training.csv")
-testing <- read.csv("project_test.csv")
+
 ```
 # Feature engineering
 ```{r sec2}
@@ -40,6 +40,11 @@ if(length(nzv_cols) > 0) training <- training[, -nzv_cols]
 # Explicitly Convert the target column to factors to be safe
 training$classe <- as.factor(training$classe) 
 
+# Now take out 10% of the training data as test data to check quality of model
+inTrain = createDataPartition(training$classe, p = 9/10)[[1]]
+training_subset = training[ inTrain,]
+testing = training[-inTrain,]
+
 ```
 
 # Build and train the model
@@ -51,22 +56,24 @@ training$classe <- as.factor(training$classe)
 fitControl <- trainControl( method = "repeatedcv",  number = 10, repeats = 3, search = "random")
 
 # Train with Random Forest of 50 trees max using the above cross-validation spec
-rndfit <-train(classe ~ ., data = training,method='rf',ntree=50, trControl=fitControl)
+rndfit <-train(classe ~ ., data = training_subset,method='rf',ntree=50, trControl=fitControl)
 ```
 # Get stats on the fitted model
 ```{r sec4}
 print(rndfit)
 
-# Predict on the training data
-pred <- predict(rndfit, newdata = training)
+# Predict on the testing portion extracted out above
+pred <- predict(rndfit, newdata = testing)
 
 # Get the confusion matrix for above prediction
-confusionMatrix(pred,training$classe)$table
+confusionMatrix(pred,testing$classe)$table
 
 ```
 
-# Predict on the test data
+# Predict on the given test data
 ```{r sec5}
+# Read the test data
+testing <- read.csv("project_test.csv")
 pred <- predict(rndfit, newdata = testing)
 
 ```

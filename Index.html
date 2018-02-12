@@ -129,9 +129,8 @@ $(document).ready(function () {
 <pre class="r"><code>library(caret)</code></pre>
 <pre><code>## Loading required package: lattice</code></pre>
 <pre><code>## Loading required package: ggplot2</code></pre>
-<pre class="r"><code># Read the data
-training &lt;- read.csv(&quot;project_training.csv&quot;)
-testing &lt;- read.csv(&quot;project_test.csv&quot;)</code></pre>
+<pre class="r"><code># Read the training data - will read the testing later below
+training &lt;- read.csv(&quot;project_training.csv&quot;)</code></pre>
 <div id="feature-engineering" class="section level1">
 <h1>Feature engineering</h1>
 <pre class="r"><code># Build filtered list of features - excluding obvious ones &amp; ones with large number of missing values (from eye balling)
@@ -150,7 +149,12 @@ nzv_cols &lt;- nearZeroVar(training)
 if(length(nzv_cols) &gt; 0) training &lt;- training[, -nzv_cols]
 
 # Explicitly Convert the target column to factors to be safe
-training$classe &lt;- as.factor(training$classe) </code></pre>
+training$classe &lt;- as.factor(training$classe) 
+
+# Now take out 10% of the training data as test data to check quality of model
+inTrain = createDataPartition(training$classe, p = 9/10)[[1]]
+training_subset = training[ inTrain,]
+testing = training[-inTrain,]</code></pre>
 </div>
 <div id="build-and-train-the-model" class="section level1">
 <h1>Build and train the model</h1>
@@ -160,7 +164,7 @@ training$classe &lt;- as.factor(training$classe) </code></pre>
 fitControl &lt;- trainControl( method = &quot;repeatedcv&quot;,  number = 10, repeats = 3, search = &quot;random&quot;)
 
 # Train with Random Forest of 50 trees max using the above cross-validation spec
-rndfit &lt;-train(classe ~ ., data = training,method='rf',ntree=50, trControl=fitControl)</code></pre>
+rndfit &lt;-train(classe ~ ., data = training_subset,method='rf',ntree=50, trControl=fitControl)</code></pre>
 <pre><code>## Loading required package: randomForest</code></pre>
 <pre><code>## randomForest 4.6-12</code></pre>
 <pre><code>## Type rfNews() to see new features/changes/bug fixes.</code></pre>
@@ -175,38 +179,40 @@ rndfit &lt;-train(classe ~ ., data = training,method='rf',ntree=50, trControl=fi
 <pre class="r"><code>print(rndfit)</code></pre>
 <pre><code>## Random Forest 
 ## 
-## 19622 samples
+## 17662 samples
 ##    51 predictor
 ##     5 classes: 'A', 'B', 'C', 'D', 'E' 
 ## 
 ## No pre-processing
 ## Resampling: Cross-Validated (10 fold, repeated 3 times) 
-## Summary of sample sizes: 17659, 17662, 17660, 17660, 17659, 17659, ... 
+## Summary of sample sizes: 15896, 15894, 15895, 15895, 15895, 15896, ... 
 ## Resampling results across tuning parameters:
 ## 
 ##   mtry  Accuracy   Kappa    
-##   16    0.9958380  0.9947354
-##   18    0.9954642  0.9942624
-##   51    0.9890260  0.9861174
+##    7    0.9954138  0.9941987
+##   32    0.9926019  0.9906414
+##   40    0.9918090  0.9896385
 ## 
 ## Accuracy was used to select the optimal model using  the largest value.
-## The final value used for the model was mtry = 16.</code></pre>
-<pre class="r"><code># Predict on the training data
-pred &lt;- predict(rndfit, newdata = training)
+## The final value used for the model was mtry = 7.</code></pre>
+<pre class="r"><code># Predict on the testing portion extracted out above
+pred &lt;- predict(rndfit, newdata = testing)
 
 # Get the confusion matrix for above prediction
-confusionMatrix(pred,training$classe)$table</code></pre>
+confusionMatrix(pred,testing$classe)$table</code></pre>
 <pre><code>##           Reference
-## Prediction    A    B    C    D    E
-##          A 5580    0    0    0    0
-##          B    0 3797    0    0    0
-##          C    0    0 3422    0    0
-##          D    0    0    0 3216    0
-##          E    0    0    0    0 3607</code></pre>
+## Prediction   A   B   C   D   E
+##          A 558   2   0   0   0
+##          B   0 376   2   0   0
+##          C   0   1 339   1   1
+##          D   0   0   1 320   1
+##          E   0   0   0   0 358</code></pre>
 </div>
-<div id="predict-on-the-test-data" class="section level1">
-<h1>Predict on the test data</h1>
-<pre class="r"><code>pred &lt;- predict(rndfit, newdata = testing)</code></pre>
+<div id="predict-on-the-given-test-data" class="section level1">
+<h1>Predict on the given test data</h1>
+<pre class="r"><code># Read the test data
+testing &lt;- read.csv(&quot;project_test.csv&quot;)
+pred &lt;- predict(rndfit, newdata = testing)</code></pre>
 </div>
 
 
